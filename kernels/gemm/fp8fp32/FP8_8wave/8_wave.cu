@@ -24,20 +24,20 @@ __global__ __launch_bounds__(512, 2) void matmul_device(const kittens::gl<fp8e4m
     constexpr int blocks_per_col = N / BLOCK_SIZE_COL; // Number of blocks per matrix col
     constexpr int total_blocks_needed = blocks_per_row * blocks_per_col; // Total blocks needed
     constexpr int k_iters = K / BLOCK_K; // K iterations
-    constexpr int NUM_THREADS = NUM_WARPS * WARP_THREADS;
-    constexpr int HALF_BLOCK_SIZE_ROW = BLOCK_SIZE_ROW / 2;
-    constexpr int HALF_BLOCK_SIZE_COL = BLOCK_SIZE_COL / 2;
-    constexpr int REG_BLOCK_M = BLOCK_SIZE_ROW / WARPS_ROW / 2;
-    constexpr int REG_BLOCK_N = BLOCK_SIZE_COL / WARPS_COL / 2;
+    constexpr int NUM_THREADS = NUM_WARPS * WARP_THREADS; // 512
+    constexpr int HALF_BLOCK_SIZE_ROW = BLOCK_SIZE_ROW / 2; // 128
+    constexpr int HALF_BLOCK_SIZE_COL = BLOCK_SIZE_COL / 2; // 128
+    constexpr int REG_BLOCK_M = BLOCK_SIZE_ROW / WARPS_ROW / 2; // 16
+    constexpr int REG_BLOCK_N = BLOCK_SIZE_COL / WARPS_COL / 2; // 32
 
-    using ST_A = st_fp8e4m3<HALF_BLOCK_SIZE_ROW, BLOCK_K, st_16x128_s>;
-    using ST_B = st_fp8e4m3<HALF_BLOCK_SIZE_COL, BLOCK_K, st_16x128_s>;
-    __shared__ ST_A As[2][2];
-    __shared__ ST_B Bs[2][2];
+    using ST_A = st_fp8e4m3<HALF_BLOCK_SIZE_ROW, BLOCK_K, st_16x128_s>; // 128 x 128
+    using ST_B = st_fp8e4m3<HALF_BLOCK_SIZE_COL, BLOCK_K, st_16x128_s>; // 128 x 128
+    __shared__ ST_A As[2][2]; // 256 x 128s 
+    __shared__ ST_B Bs[2][2]; // 256 x 128 
 
-    using RT_A = rt_fp8e4m3<REG_BLOCK_M, BLOCK_K>;
-    using RT_B = rt_fp8e4m3<REG_BLOCK_N, BLOCK_K>;
-    using RT_C = rt_fl<REG_BLOCK_M, REG_BLOCK_N, col_l, rt_16x16_s>;
+    using RT_A = rt_fp8e4m3<REG_BLOCK_M, BLOCK_K>; // 16 x 128
+    using RT_B = rt_fp8e4m3<REG_BLOCK_N, BLOCK_K>; // 32 x 128
+    using RT_C = rt_fl<REG_BLOCK_M, REG_BLOCK_N, col_l, rt_16x16_s>; // 16 x 32
 
     RT_A a;
     RT_B b0;
@@ -68,8 +68,8 @@ __global__ __launch_bounds__(512, 2) void matmul_device(const kittens::gl<fp8e4m
     );
     constexpr int bytes_per_thread = ST_A::underlying_subtile_bytes_per_thread;
     constexpr int bytes_per_memcpy = bytes_per_thread * NUM_THREADS;
-    constexpr int memcpy_per_tile_A = HALF_BLOCK_SIZE_ROW * BLOCK_K * sizeof(T) / bytes_per_memcpy;
-    constexpr int memcpy_per_tile_B = HALF_BLOCK_SIZE_COL * BLOCK_K * sizeof(T) / bytes_per_memcpy;
+    constexpr int memcpy_per_tile_A = HALF_BLOCK_SIZE_ROW * BLOCK_K * sizeof(T) / bytes_per_memcpy; // 128 x 128
+    constexpr int memcpy_per_tile_B = HALF_BLOCK_SIZE_COL * BLOCK_K * sizeof(T) / bytes_per_memcpy; // 128 x 128
     uint32_t swizzled_offsets_A[memcpy_per_tile_A];
     uint32_t swizzled_offsets_B[memcpy_per_tile_B];
     G::prefill_swizzled_offsets(As[tic][0], A, swizzled_offsets_A);

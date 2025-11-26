@@ -29,6 +29,7 @@ git clone git@github.com:HazyResearch/HipKittens.git
 **or**
 git clone https://github.com/HazyResearch/HipKittens.git
 
+# For MI350X and MI355X with gfx950 arch:
 # obtain an amd docker using docker pull or podman pull
 podman pull docker.io/rocm/7.0-preview:rocm7.0_preview_pytorch_training_mi35x_beta
 
@@ -46,6 +47,25 @@ podman run -it \
     -e USE_FASTSAFETENSOR=1 \
     -e SAFETENSORS_FAST_GPU=1 \
     rocm/7.0-preview:rocm7.0_preview_pytorch_training_mi35x_beta \
+    bash
+
+# For MI300X/MI325X, use below docker for gfx942 arch:
+podman pull rocm/7.0-preview:rocm7.0_rel_30_ubuntu22.04_py3.10_pytorch_release_2.8.0
+
+#enter the docker
+podman run -it \
+    --ipc=host \
+    --network=host \
+    --privileged \
+    --cap-add=CAP_SYS_ADMIN \
+    --cap-add=SYS_PTRACE \
+    --security-opt seccomp=unconfined \
+    --device=/dev/kfd \
+    --device=/dev/dri \
+    -v $(pwd):/workdir/ \
+    -e USE_FASTSAFETENSOR=1 \
+    -e SAFETENSORS_FAST_GPU=1 \
+    rocm/7.0-preview:rocm7.0_rel_30_ubuntu22.04_py3.10_pytorch_release_2.8.0 \
     bash
 
 # set the environment variables
@@ -81,7 +101,7 @@ python test_python.py
 
 # On the mi300x or mi325x run:
 git checkout cdna3 # not the main branch!
-cd kernels/gemm/bf16fp32/mi325x/
+cd kernels/gemm/bf16fp32/mi325x/8192_256_256_64_16/
 make clean && make
 python test_python.py
 ```
